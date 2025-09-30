@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Depression Self-Check (10 Questions)</title>
+<style>
+  :root{
+    --bg:#0e2440;
+    --card:#132a4a;
+    --ink:#fff;
+    --muted:#c9d4e8;
+    --accent:#a7c4ff;
+    --good:#87c23a;
+    --warn:#f1b62b;
+    --mod:#f07d3a;
+    --bad:#e24a3a;
+    --edge-radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
+    background:linear-gradient(180deg,#091a33 0%, var(--bg) 100%);
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    padding:32px 16px 48px;
+  }
+  .app{width:100%; max-width:900px;}
+  header{margin-bottom:18px;}
+  h1{margin:0 0 10px; font-size:clamp(20px,4vw,28px); letter-spacing:.3px;}
+  .sub{color:var(--muted); margin:0 0 14px; font-size:clamp(13px,2.6vw,15px);}
+
+  /* progress bar */
+  .progress-wrap{background:#0b203d; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px 12px;}
+  .progress-top{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px; color:var(--muted); font-size:14px;}
+  .bar{height:10px; width:100%; background:rgba(255,255,255,.08); border-radius:999px; overflow:hidden;}
+  .bar>span{display:block; height:100%; width:0%; background:linear-gradient(90deg, var(--good), var(--warn), var(--mod), var(--bad)); transition:width .35s ease;}
+
+  /* card */
+  .card{background:var(--card); border:1px solid rgba(255,255,255,.08); border-radius:var(--edge-radius); padding:20px; margin-top:18px; box-shadow:0 10px 30px rgba(0,0,0,.25);}
+
+  .question{font-size:clamp(16px,3.2vw,20px); line-height:1.35; margin-bottom:14px;}
+  .options{display:grid; grid-template-columns:1fr; gap:10px;}
+  .opt{display:flex; align-items:center; gap:10px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.03); border-radius:12px; padding:12px 14px; cursor:pointer; transition:transform .06s ease, border-color .15s ease, background .15s ease;}
+  .opt:hover{border-color:rgba(255,255,255,.25); background:rgba(255,255,255,.06)}
+  .opt:active{transform:scale(.995)}
+  .opt input{accent-color:var(--accent); transform:scale(1.15)}
+  .opt span{flex:1}
+
+  .nav{display:flex; justify-content:space-between; gap:10px; margin-top:16px;}
+  button{appearance:none; border:none; border-radius:12px; padding:12px 16px; font-weight:600; cursor:pointer; color:#0e2240; background:#e6f0ff; transition:filter .15s ease, transform .06s ease;}
+  button.primary{background:#a7c4ff}
+  button:disabled{opacity:.5; cursor:not-allowed}
+  button:hover:not(:disabled){filter:brightness(1.05)}
+  button:active:not(:disabled){transform:translateY(1px)}
+
+  /* result section */
+  .result{display:none;}
+  .result h2{margin:0 0 6px; font-size:clamp(20px,3.6vw,26px);}
+  .result .summary{color:var(--muted); margin-bottom:18px;}
+
+  /* Gauge */
+  .gauge-wrap{display:flex; flex-direction:column; align-items:center; gap:12px; padding:14px; border:1px solid rgba(255,255,255,.08); border-radius:16px; background:rgba(255,255,255,.03);}
+  svg{max-width:680px;width:100%;height:auto}
+  .tick text{fill:#ffffff; font-size:14px; font-weight:600}
+  .tick line{stroke:#ffffff; stroke-width:2}
+
+  /* score box */
+  .callout{opacity:0; transform:translateY(-6px); transition:opacity .4s ease, transform .4s ease;
+           display:flex; flex-direction:column; align-items:center; gap:6px;
+           background:rgba(167,196,255,.08); border:1px solid rgba(167,196,255,.35);
+           border-radius:12px; padding:10px 14px; width:100%; max-width:420px; text-align:center;}
+  .callout.show{opacity:1; transform:none;}
+  .score{font-weight:700; font-size:clamp(18px,3.2vw,22px);}
+  .score-bucket{font-weight:600;}
+
+  /* vertical list */
+  .label-list{display:flex; flex-direction:column; gap:8px; width:100%; max-width:420px; margin:6px auto 0;}
+  .label{display:flex; justify-content:center; align-items:center; text-align:center; font-size:13px; color:#eaf0ff; padding:10px 12px; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);}
+
+  .again{display:flex; justify-content:center; margin-top:18px;}
+
+  @media (min-width:720px){ .options{grid-template-columns:repeat(2,1fr)} }
+</style>
+</head>
+<body>
+  <div class="app" aria-live="polite">
+    <header>
+      <h1>Depression Self-Check</h1>
+      <p class="sub">Answer 10 quick questions. This is not a diagnosis — it’s a self-reflection tool.</p>
+      <div class="progress-wrap" aria-label="Progress">
+        <div class="progress-top">
+          <div id="stepLabel">Question 1 of 10</div>
+          <div id="percentLabel">0%</div>
+        </div>
+        <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="barFill"></span>
+        </div>
+      </div>
+    </header>
+
+    <main class="card" id="quizCard" role="group" aria-labelledby="qText">
+      <div id="qText" class="question"></div>
+      <form id="form" class="options"></form>
+      <div class="nav">
+        <button id="prevBtn" type="button">Back</button>
+        <div style="display:flex; gap:10px;">
+          <button id="skipBtn" type="button">Skip</button>
+          <button id="nextBtn" class="primary" type="button">Next</button>
+        </div>
+      </div>
+    </main>
+
+    <section class="card result" id="resultCard" aria-label="Result">
+      <h2>Result</h2>
+      <p class="summary">Your score will appear above the ranges after the needle stops.</p>
+
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 320 180" role="img" aria-label="Semicircle gauge from 0 to 50">
+          <defs>
+            <linearGradient id="gradFull" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"  stop-color="#87c23a"/>
+              <stop offset="30%" stop-color="#f1b62b"/>
+              <stop offset="60%" stop-color="#f07d3a"/>
+              <stop offset="100%" stop-color="#e24a3a"/>
+            </linearGradient>
+          </defs>
+          <!-- full gradient arc -->
+          <path d="M20 160 A140 140 0 0 1 300 160" fill="none" stroke="url(#gradFull)" stroke-width="26" stroke-linecap="round"/>
+          <!-- ticks -->
+          <g id="ticks"></g>
+          <!-- tiny marker dot on the arc at the exact score angle -->
+          <circle id="scoreDot" cx="160" cy="160" r="4" fill="#fff" opacity="0"/>
+          <!-- needle: start exactly at -180° (leftmost) -->
+          <g id="needle" transform="rotate(-90 160 160)">
+            <line x1="160" y1="160" x2="160" y2="38" stroke="#fff" stroke-width="3" />
+            <circle cx="160" cy="160" r="6" fill="#fff"/>
+          </g>
+        </svg>
+
+        <div class="callout" id="calloutBox">
+          <div class="score" id="readingText">Your score is 0 out of 50</div>
+          <div class="score-bucket" id="bucketText">—</div>
+        </div>
+
+        <div class="label-list">
+          <div class="label">0–10 — No depression</div>
+          <div class="label">10–20 — Mild signs</div>
+          <div class="label">20–30 — It’s starting</div>
+          <div class="label">30–40 — Significant signs</div>
+          <div class="label">40–50 — Severe depression</div>
+        </div>
+      </div>
+
+      <div class="again">
+        <button id="againBtn" type="button">Retake Test</button>
+      </div>
+    </section>
+  </div>
+
+<script>
+const questions = [
+  "Over the last two weeks, how often have you felt down or joyless?",
+  "How often have you had trouble enjoying things that usually feel pleasant?",
+  "How often have you struggled to fall asleep, stay asleep, or slept too much?",
+  "How often have you felt low energy or fatigue?",
+  "How often have you noticed changes in appetite (too little or too much)?",
+  "How often have you felt bad about yourself or felt like a failure?",
+  "How often have you had trouble concentrating (reading, tasks, phone)?",
+  "How often have you felt slowed down or unusually restless?",
+  "How often have you avoided people or activities you used to like?",
+  "How often have you thought that life is pointless or that you wouldn’t be missed?"
+];
+
+const options = [
+  {label:"Never", value:0},
+  {label:"Rarely", value:1},
+  {label:"Sometimes", value:2},
+  {label:"Often", value:3},
+  {label:"Very often", value:4},
+  {label:"Always", value:5}
+];
+
+const answers = Array(questions.length).fill(null);
+let idx = 0;
+
+const qText = document.getElementById('qText');
+const form = document.getElementById('form');
+const nextBtn = document.getElementById('nextBtn');
+const prevBtn = document.getElementById('prevBtn');
+const skipBtn = document.getElementById('skipBtn');
+
+const stepLabel = document.getElementById('stepLabel');
+const percentLabel = document.getElementById('percentLabel');
+const bar = document.querySelector('.bar');
+const barFill = document.getElementById('barFill');
+
+const quizCard = document.getElementById('quizCard');
+const resultCard = document.getElementById('resultCard');
+
+const needle = document.getElementById('needle');
+const readingText = document.getElementById('readingText');
+const bucketText = document.getElementById('bucketText');
+const calloutBox = document.getElementById('calloutBox');
+const againBtn = document.getElementById('againBtn');
+const ticksGroup = document.getElementById('ticks');
+const scoreDot = document.getElementById('scoreDot');
+
+function renderQuestion(){
+  qText.textContent = questions[idx];
+  form.innerHTML = '';
+  options.forEach((opt, i)=>{
+    const id = `q${idx}_opt${i}`;
+    const label = document.createElement('label');
+    label.className = 'opt';
+    label.setAttribute('for', id);
+
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'q'+idx;
+    input.id = id;
+    input.value = opt.value;
+
+    if(answers[idx] === opt.value) input.checked = true;
+
+    input.addEventListener('change', ()=>{
+      answers[idx] = opt.value;
+      updateNav();
+    });
+
+    const text = document.createElement('span');
+    text.textContent = `${opt.label} (${opt.value})`;
+
+    label.appendChild(input);
+    label.appendChild(text);
+    form.appendChild(label);
+  });
+
+  updateNav();
+  updateProgress();
+}
+
+function updateNav(){
+  prevBtn.disabled = idx === 0;
+  nextBtn.textContent = (idx === questions.length-1) ? 'Finish' : 'Next';
+}
+
+function updateProgress(){
+  const answered = answers.filter(v=>v!==null).length;
+  const pct = Math.round((answered/answers.length)*100);
+  const stepPct = Math.round(((idx)/answers.length)*100);
+  stepLabel.textContent = `Question ${idx+1} of ${questions.length}`;
+  percentLabel.textContent = `${pct}%`;
+  bar.setAttribute('aria-valuenow', pct);
+  barFill.style.width = `${Math.max(stepPct, (idx+1)/answers.length*100)}%`;
+}
+
+/* Nav */
+nextBtn.addEventListener('click', ()=>{
+  if(idx === questions.length-1){
+    showResult();
+    return;
+  }
+  idx++;
+  renderQuestion();
+});
+prevBtn.addEventListener('click', ()=>{ if(idx>0){ idx--; renderQuestion(); } });
+skipBtn.addEventListener('click', ()=>{
+  if(idx === questions.length-1) showResult();
+  else { idx++; renderQuestion(); }
+});
+
+function totalScore(){ return answers.reduce((sum,v)=> sum + (v ?? 0), 0); }
+
+/* Ticks: equal distance with -180..0 degrees mapping */
+(function makeTicks(){
+  const startAngle = -180;
+  const endAngle =   0;
+  const cx=160, cy=160, r=140;
+  for(let t=0; t<=50; t+=10){
+    const angle = startAngle + (t/50)*(endAngle-startAngle);
+    const rad = angle * Math.PI/180;
+    const x1 = cx + Math.cos(rad)* r;
+    const y1 = cy + Math.sin(rad)* r;
+    const x2 = cx + Math.cos(rad)*(r-26);
+    const y2 = cy + Math.sin(rad)*(r-26);
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","tick");
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+    line.setAttribute("x1", x1); line.setAttribute("y1", y1);
+    line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+    g.appendChild(line);
+
+    const tx = cx + Math.cos(rad)*(r-42);
+    const ty = cy + Math.sin(rad)*(r-42);
+    const text = document.createElementNS("http://www.w3.org/2000/svg","text");
+    text.setAttribute("x", tx);
+    text.setAttribute("y", ty+5);
+    text.setAttribute("text-anchor","middle");
+    text.textContent = t.toString();
+    g.appendChild(text);
+
+    ticksGroup.appendChild(g);
+  }
+})();
+
+function showResult(){
+  let score = totalScore();
+  // Clamp to [0, 50] for safety
+  score = Math.max(0, Math.min(50, score));
+
+  quizCard.style.display = 'none';
+  resultCard.style.display = 'block';
+
+  // animate needle: angle -180 (left) to 0 (right)
+  const angle = angleForScore(score); 
+  needle.style.transition = 'transform 1.2s cubic-bezier(.22,1,.36,1)';
+  requestAnimationFrame(()=>{ needle.setAttribute('transform', `rotate(${angle} 160 160)`); });
+
+  // place a small dot on the arc at the exact score location (visual verification)
+  const r = 140;
+  const cx = 160, cy = 160;
+  const rad = angle * Math.PI/180;
+  const dotR = r - 13; // sit on the center of the arc stroke
+  scoreDot.setAttribute('cx', cx + Math.cos(rad)*dotR);
+  scoreDot.setAttribute('cy', cy + Math.sin(rad)*dotR);
+  scoreDot.setAttribute('opacity', '0.9');
+
+  const onDone = ()=>{
+    readingText.textContent = `Your score is ${score} out of 50`;
+    bucketText.textContent = bucketFor(score);
+    calloutBox.classList.add('show');
+  };
+  needle.addEventListener('transitionend', onDone, {once:true});
+}
+
+function bucketFor(s){
+  if (s < 10) return "0–10 — No depression";
+  if (s < 20) return "10–20 — Mild signs";
+  if (s < 30) return "20–30 — It’s starting";
+  if (s < 40) return "30–40 — Significant signs";
+  return "40–50 — Severe depression";
+}
+
+againBtn.addEventListener('click', ()=>{
+  answers.fill(null);
+  idx = 0;
+  resultCard.style.display = 'none';
+  quizCard.style.display = 'block';
+  needle.style.transition = 'none';
+  needle.setAttribute('transform','rotate(-180 160 160)');
+  scoreDot.setAttribute('opacity','0');
+  calloutBox.classList.remove('show');
+  renderQuestion();
+});
+
+renderQuestion();
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    const withinQuiz = quizCard.style.display !== 'none';
+    if(withinQuiz){ e.preventDefault(); nextBtn.click(); }
+  }
+});
+</script>
+
+<script>
+// Ensure consistent mapping: 0 -> left (-90deg), 25 -> up (0deg), 50 -> right (+90deg)
+// If needle graphic points UP by default, rotation = -90 + (score/50)*180
+function angleForScore(score){
+  score = Math.max(0, Math.min(50, Number(score)||0));
+  return -90 + (score/50)*180;
+}
+</script>
+
+</body>
+</html>
